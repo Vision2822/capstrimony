@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth';
-import type { User, Session, Account, Profile } from 'next-auth';
+import type { User, Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { AdapterUser } from 'next-auth/adapters';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -32,6 +32,10 @@ interface ExtendedUser {
   email?: string | null;
   prn: string;
   onboardingComplete: boolean;
+}
+
+interface SessionUpdate {
+  onboardingComplete?: boolean;
 }
 
 export const {
@@ -123,19 +127,13 @@ export const {
     async jwt({ 
       token, 
       user, 
-      account, 
-      profile, 
       trigger, 
-      isNewUser, 
       session 
     }: {
       token: JWT;
       user?: User | AdapterUser;
-      account?: Account | null;
-      profile?: Profile;
       trigger?: "update" | "signIn" | "signUp";
-      isNewUser?: boolean;
-      session?: any;
+      session?: SessionUpdate;
     }) {
       // Only on initial sign in
       if (user) {
@@ -162,9 +160,16 @@ export const {
       token: JWT;
     }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).prn = token.prn;
-        (session.user as any).onboardingComplete = token.onboardingComplete;
+        const extendedSession = session as Session & {
+          user: {
+            id: string;
+            prn: string;
+            onboardingComplete: boolean;
+          };
+        };
+        extendedSession.user.id = token.id as string;
+        extendedSession.user.prn = token.prn as string;
+        extendedSession.user.onboardingComplete = token.onboardingComplete as boolean;
       }
       return session;
     },

@@ -486,7 +486,7 @@ export default function OnboardingPage() {
                       onCheckedChange={(checked) => updateField('willingToLead', checked as boolean)}
                     />
                     <Label htmlFor="lead" className="text-sm font-medium cursor-pointer">
-                      I'm willing to be a team leader
+                      I&apos;m willing to be a team leader
                     </Label>
                   </div>
                 </div>

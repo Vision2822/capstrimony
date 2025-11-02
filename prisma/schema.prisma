@@ -1,0 +1,250 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// USER MODEL
+// ==========================================
+
+model User {
+  id            String    @id @default(cuid())
+  
+  // PESU Academy Data
+  prn           String    @unique
+  srn           String    @unique
+  email         String    @unique
+  name          String
+  
+  // Academic Info
+  department    Department
+  branch        String
+  semester      Int
+  section       String?
+  program       String?
+  campus        Campus
+  campusCode    Int
+  
+  // Contact
+  phone         String?
+  
+  // Profile
+  bio           String?   @db.VarChar(500)
+  profilePicUrl String?   @db.Text
+  githubUrl     String?
+  linkedinUrl   String?
+  behanceUrl    String?
+  portfolioUrl  String?
+  
+  // Skills & Preferences
+  skills        Skill[]
+  domains       Domain[]
+  tools         String[]
+  languages     String[]
+  
+  // Matching preferences
+  preferredRoles     Role[]
+  preferredTeamSize  Int       @default(4)
+  hoursPerWeek      Int?
+  workingStyle      WorkStyle @default(HYBRID)
+  willingToLead     Boolean   @default(false)
+  availability      Json?
+  
+  // Status
+  isActive           Boolean @default(true)
+  isLookingForTeam   Boolean @default(true)
+  profileCompletion  Float   @default(0.0)
+  onboardingComplete Boolean @default(false)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastActiveAt  DateTime @default(now())
+  lastSyncedAt  DateTime @default(now())
+  
+  // Relations
+  ownedProjects     Project[]
+  teamMemberships   TeamMember[]
+  sentInteractions  Interaction[] @relation("InteractionSender")
+  receivedInteractions Interaction[] @relation("InteractionReceiver")
+  
+  @@index([prn])
+  @@index([srn])
+  @@index([department, semester])
+  @@index([isLookingForTeam, isActive])
+}
+
+// ==========================================
+// PROJECTS & TEAMS
+// ==========================================
+
+model Project {
+  id          String   @id @default(cuid())
+  ownerId     String
+  title       String
+  description String   @db.Text
+  domains     Domain[]
+  techStack   String[]
+  status      ProjectStatus @default(RECRUITING)
+  
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  team        Team?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  projectId   String?  @unique
+  capacity    Int      @default(4)
+  status      TeamStatus @default(FORMING)
+  
+  project     Project?  @relation(fields: [projectId], references: [id])
+  members     TeamMember[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([status])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  role      Role?
+  isLead    Boolean  @default(false)
+  
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  joinedAt  DateTime @default(now())
+  
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+// ==========================================
+// INTERACTIONS
+// ==========================================
+
+model Interaction {
+  id         String          @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  type       InteractionType
+  
+  fromUser   User @relation("InteractionSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User @relation("InteractionReceiver", fields: [toUserId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId])
+  @@index([type])
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Department {
+  CSE
+  ECE
+  EEE
+  ME
+  CE
+  BT
+  AIML
+  DS
+}
+
+enum Campus {
+  RR
+  EC
+}
+
+enum Skill {
+  JAVASCRIPT
+  TYPESCRIPT
+  PYTHON
+  JAVA
+  CPP
+  REACT
+  NEXTJS
+  NODEJS
+  FLUTTER
+  REACT_NATIVE
+  SQL
+  MONGODB
+  POSTGRESQL
+  AWS
+  DOCKER
+  MACHINE_LEARNING
+  DEEP_LEARNING
+  UI_UX
+  FIGMA
+}
+
+enum Domain {
+  WEB_DEVELOPMENT
+  MOBILE_DEVELOPMENT
+  AI_ML
+  DATA_SCIENCE
+  BLOCKCHAIN
+  IOT
+  CYBERSECURITY
+  CLOUD_COMPUTING
+  DEVOPS
+}
+
+enum Role {
+  FRONTEND_DEVELOPER
+  BACKEND_DEVELOPER
+  FULL_STACK_DEVELOPER
+  MOBILE_DEVELOPER
+  UI_UX_DESIGNER
+  DATA_SCIENTIST
+  ML_ENGINEER
+  PROJECT_MANAGER
+}
+
+enum WorkStyle {
+  REMOTE
+  IN_PERSON
+  HYBRID
+}
+
+enum ProjectStatus {
+  RECRUITING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TeamStatus {
+  FORMING
+  ACTIVE
+  COMPLETED
+  DISBANDED
+}
+
+enum InteractionType {
+  LIKE
+  SKIP
+  SUPERLIKE
+  BLOCK
+}

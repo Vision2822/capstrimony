@@ -43,3 +43,6 @@ prisma/*.db-journal
 # Misc
 *.pem
 .cache
+.env
+.env
+.env.local

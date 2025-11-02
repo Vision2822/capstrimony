@@ -1,4 +1,7 @@
 import NextAuth from 'next-auth';
+import type { User, Session, Account, Profile } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
+import type { AdapterUser } from 'next-auth/adapters';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import { authenticateWithPESU } from '@/lib/pesu-scraper';
@@ -22,6 +25,14 @@ const DEPARTMENT_MAP: Record<string, Department> = {
   'Data Science': Department.DS,
   'DS': Department.DS,
 };
+
+interface ExtendedUser {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  prn: string;
+  onboardingComplete: boolean;
+}
 
 export const {
   handlers,
@@ -104,25 +115,57 @@ export const {
           email: user.email,
           prn: user.prn,
           onboardingComplete: user.onboardingComplete,
-        };
+        } as ExtendedUser;
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ 
+      token, 
+      user, 
+      account, 
+      profile, 
+      trigger, 
+      isNewUser, 
+      session 
+    }: {
+      token: JWT;
+      user?: User | AdapterUser;
+      account?: Account | null;
+      profile?: Profile;
+      trigger?: "update" | "signIn" | "signUp";
+      isNewUser?: boolean;
+      session?: any;
+    }) {
+      // Only on initial sign in
       if (user) {
-        token.id = user.id;
-        token.prn = user.prn;
-        token.name = user.name;
-        token.email = user.email;
-        token.onboardingComplete = user.onboardingComplete;
+        const extendedUser = user as ExtendedUser;
+        token.id = extendedUser.id;
+        token.prn = extendedUser.prn;
+        token.name = extendedUser.name;
+        token.email = extendedUser.email;
+        token.onboardingComplete = extendedUser.onboardingComplete;
       }
+      
+      // Handle session updates
+      if (trigger === "update" && session?.onboardingComplete !== undefined) {
+        token.onboardingComplete = session.onboardingComplete;
+      }
+      
       return token;
     },
-    async session({ session, token }: any) {
-      session.user.id = token.id;
-      session.user.prn = token.prn;
-      session.user.onboardingComplete = token.onboardingComplete;
+    async session({ 
+      session, 
+      token 
+    }: { 
+      session: Session; 
+      token: JWT;
+    }) {
+      if (session.user) {
+        (session.user as any).id = token.id;
+        (session.user as any).prn = token.prn;
+        (session.user as any).onboardingComplete = token.onboardingComplete;
+      }
       return session;
     },
   },

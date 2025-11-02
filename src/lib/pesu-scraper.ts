@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as cheerio from 'cheerio';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
@@ -177,14 +177,15 @@ export async function authenticateWithPESU(
       success: true,
       profile: profile as PESUProfile,
     };
-  } catch (error: any) {
-    console.error('PESU Authentication Error:', error.message);
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    console.error('PESU Authentication Error:', axiosError.message);
     
-    if (error.code === 'ECONNABORTED') {
+    if (axiosError.code === 'ECONNABORTED') {
       return { success: false, error: 'Connection timeout' };
     }
     
-    if (error.response?.status === 401) {
+    if (axiosError.response?.status === 401) {
       return { success: false, error: 'Invalid credentials' };
     }
     

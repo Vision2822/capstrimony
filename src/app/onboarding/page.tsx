@@ -273,7 +273,7 @@ export default function OnboardingPage() {
         await saveProgress();
         setCurrentStep(prev => prev + 1);
       } catch (error) {
-        // Error already handled in saveProgress
+        console.error('Save error:', error);
       } finally {
         setLoading(false);
       }
@@ -283,13 +283,13 @@ export default function OnboardingPage() {
         const result = await saveProgress();
         
         if (result.onboardingComplete) {
-          toast.success('Profile complete! Let\'s find your teammates!');
+          toast.success("Profile complete! Let's find your teammates!");
         } else {
           toast.success('Profile saved! You can complete it anytime.');
         }
         
         router.push('/dashboard');
-      } catch (error) {
+      } catch{
         setLoading(false);
       }
     }
